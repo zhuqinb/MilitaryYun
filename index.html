@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>全景图</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+    <section class="wrapper" style="width: 100%">
+        <header>
+            <span>军运会场馆全景图</span>
+            <div>
+                <span class="date"></span>
+                <!-- <span class="acritochromacy-btn">色差模式</span> -->
+                <span class="anastole"></span>
+                <span class="maximization"></span>
+                <span class="close"></span>
+            </div>
+            <div class="acritochromacy"></div>
+        </header>
+        <section class="main">
+            <aside class="nav">
+                <div class="nav_items"></div>
+                <div class="toggleSlide" style="z-index: 1000"><i class="left-arrow"></i></div>
+            </aside>
+
+            <article class="fullview" style="position: relative">
+                <div id="map" style="height: 100%"></div>
+                <div class="resetMap"></div>
+                <div class="back"><i class="left-arrow"></i></div>
+                <!-- <iframe allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true" name="callframe" id="callframe" frameborder="0" style="height: 100%;width: 100%" src=""></iframe> -->
+            </article>
+        </section>
+    </section>
+
+    <script>
+        window.$ = window.jQuery = require('jquery');
+    </script>
+    <script src="assets/js/render.js"></script>
+    <!-- <script src="http://digitalwuhan.gov.cn/whemap/"></script> -->
+    <script src="http://api.tianditu.gov.cn/api?v=3.0&tk=b0e36535826b3edda8cc496a2390c0ae" type="text/javascript"></script>
+    <script>
+        onload = function () {
+            var map, zoom = 10;
+            //初始化地图对象
+            map = new TMap("map");
+            //设置显示地图的中心点和级别
+
+            map.centerAndZoom(new TLngLat(114.254749, 30.579585), zoom);
+            map.enableHandleMouseScroll()
+
+            let win = null //全局的icon上面的弹窗
+            let iconMap = new Map() //保存icon的集合
+            fullViewMapping.forEach(element => {
+                var icon = new TIcon("./assets/images/point.png", new TSize(20, 36), {
+                    anchor: new TPixel(10, 36)
+                });
+                var marker = new TMarker(new TLngLat(element.Lat, element.Lon), {
+                    icon: icon
+                });
+                iconMap.set(element.guid, {
+                    icon: icon,
+                    lat: element.Lat,
+                    lon: element.Lon
+                })
+                map.addOverLay(marker)
+                TEvent.addListener(marker, "click", function (e) {
+
+                    console.log(element.Lat, element.Lon)
+                    selectIframe(element.guid)
+                    // $('.nav_items').scrollTop($0.offsetTop)
+
+                })
+
+                TEvent.addListener(marker, "mouseover", function (e) {
+                    setIconStyle(icon, element.Lat, element.Lon, element.guid, true)
+                    var top = $('.nav_items section').eq(getNavIndex(element.guid)).get(0).offsetTop -
+                        8
+                    //修改 nav_items section的样式
+                    selectNavItems(element.guid)
+                    $('.nav_items').stop().animate({
+                        scrollTop: top
+                    })
+                })
+
+                TEvent.addListener(marker, "mouseout", function (e) {
+                    icon.setImageUrl('./assets/images/point.png')
+                })
+            });
+
+
+            $('.nav_items').on('mouseenter', 'section', function (e) {
+                let guid = $(this).data('guid')
+                let iconInfo = iconMap.get(guid)
+                // icon.setImageUrl('./assets/images/pointHover.png')
+                map.panTo(new TLngLat(iconInfo.lat, iconInfo.lon))
+                setIconStyle(iconInfo.icon, iconInfo.lat, iconInfo.lon, guid)
+            })
+            $('.nav_items').on('mouseleave', 'section', function (e) {
+                let icon = iconMap.get($(this).data('guid')).icon
+                icon.setImageUrl('./assets/images/point.png')
+            })
+
+            $('.resetMap').on('click', function (e) {
+                map.centerAndZoom(new TLngLat(114.254749, 30.579585), zoom);
+            })
+
+            function setIconStyle(icon, lat, lon, guid, needAutoCloseInfoWin = false) {
+                icon.setImageUrl('./assets/images/pointHover.png')
+                if (win) {
+                    map.removeOverLay(win)
+                }
+                win = new TInfoWindow(new TLngLat(lat, lon), {
+                    offset: new TPixel(150, 60)
+                });
+                let info = getFullViewData(guid)
+                win.setLabel(
+                    `<img onclick=selectIframe('${guid}')  width=220 height=170 style="margin-top: -7px;cursor: pointer;" src=http://fly.cigem.cn${info[0].thumbnail}/><br><p>${info[0].sceneName}</p><div class="arrow"></div>`
+                )
+                win.setOffset(new TPixel(2, 5))
+                win.setHeight(100)
+                win.setWidth(235)
+                map.addOverLay(win)
+                if (needAutoCloseInfoWin) {
+                    win.closeInfoWindowWithMouse()
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
